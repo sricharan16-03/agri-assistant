@@ -1,79 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Farming Techniques - Agriculture Assistant</title>
     <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
 
-<header class="navbar">
-    <div class="container">
-        <a href="index.html" class="logo">Agri-Assistant 🌱</a>
-        <nav>
-            <a href="crop-data.html">Crop Data</a>
-            <a href="recommender.html">Crop Recommender</a>
-            <a href="techniques.html">Techniques</a>
-            <a href="schemes.html">Schemes</a>
-            <a href="diseases.html">Diseases</a>
-            <a href="npk-advisor.html">NPK Advisor</a>
-            <a href="contact.html">Contact</a>
-        </nav>
-    </div>
-</header>
+    <header class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo">Agri-Assistant 🌱</a>
+            <nav>
+                <a href="crop-data.html">Crop Data</a>
+                <a href="recommender.html">Crop Recommender</a>
+                <a href="techniques.html">Techniques</a>
+                <a href="schemes.html">Schemes</a>
+                <a href="diseases.html">Diseases</a>
+                <a href="npk-advisor.html">NPK Advisor</a>
+                <a href="contact.html">Contact</a>
+            </nav>
+        </div>
+    </header>
 
-<main class="container">
-    <h2>💡 Modern Farming Techniques</h2>
-    <p style="text-align:center; max-width:700px; margin:0 auto 40px auto;">
-        Learn about modern techniques that can help improve crop yield,
-        save resources, and promote sustainable agriculture.
-    </p>
+    <main class="container">
+        <h2>💡 Modern Farming Techniques</h2>
+        <p style="text-align:center; max-width:700px; margin:0 auto 40px auto;">
+            Learn about modern techniques that can help improve crop yield,
+            save resources, and promote sustainable agriculture.
+        </p>
 
-    <div id="techniques-list" class="feature-cards">
-        <p>Loading techniques...</p>
-    </div>
-</main>
+        <div id="techniques-list" class="feature-cards">
+            <p>Loading techniques...</p>
+        </div>
+    </main>
 
-<footer class="footer">
-    <div class="container">
-        <p>&copy; 2025 Agriculture Assistant. All Rights Reserved.</p>
-    </div>
-</footer>
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Agriculture Assistant. All Rights Reserved.</p>
+        </div>
+    </footer>
 
-<div class="creator-credit">Created by Sricharan</div>
+    <div class="creator-credit">Created by Sricharan</div>
 
-<script>
-    // Consistent with all other pages
-    const API_BASE = "/api";
+    <script>
 
-    window.addEventListener("DOMContentLoaded", async () => {
-        const techniquesListDiv = document.getElementById("techniques-list");
+        const API_BASE = "/api";
 
-        try {
-            const response = await fetch(`${API_BASE}/techniques`);
-            if (!response.ok) throw new Error("Failed to fetch data");
+        window.addEventListener("DOMContentLoaded", async () => {
+            const techniquesListDiv = document.getElementById("techniques-list");
 
-            const techniques = await response.json();
-            techniquesListDiv.innerHTML = "";
+            try {
+                const response = await fetch(`${API_BASE}/techniques`);
+                if (!response.ok) throw new Error("Failed to fetch data");
 
-            techniques.forEach(technique => {
-                const techCard = document.createElement("div");
-                techCard.className = "card";
-                techCard.innerHTML = `
+                const techniques = await response.json();
+                techniquesListDiv.innerHTML = "";
+
+                techniques.forEach(technique => {
+                    const techCard = document.createElement("div");
+                    techCard.className = "card";
+                    techCard.innerHTML = `
                     <h3>${technique.name}</h3>
                     <p>${technique.desc}</p>
                 `;
-                techniquesListDiv.appendChild(techCard);
-            });
+                    techniquesListDiv.appendChild(techCard);
+                });
 
-        } catch (error) {
-            console.error("Error fetching techniques:", error);
-            techniquesListDiv.innerHTML =
-                '<p style="color:red;">Could not load techniques. Please ensure the backend API is working.</p>';
-        }
-    });
-</script>
+            } catch (error) {
+                console.error("Error fetching techniques:", error);
+                techniquesListDiv.innerHTML =
+                    '<p style="color:red;">Could not load techniques. Please ensure the backend API is working.</p>';
+            }
+        });
+    </script>
 
 </body>
+
 </html>

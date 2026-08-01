@@ -11,7 +11,7 @@ const Crop = require("../models/Crop");
 
 const app = express();
 
-// ---------- CORS (local + vercel friendly) ----------
+
 app.use(
   cors({
     origin: true,
@@ -21,7 +21,7 @@ app.use(
 
 app.use(express.json());
 
-// ---------- MongoDB (serverless-safe) ----------
+
 let isConnected = false;
 
 async function connectDB() {
@@ -40,14 +40,12 @@ connectDB().catch(err =>
   console.error("❌ MongoDB connection error:", err)
 );
 
-// ---------- HEALTH CHECK ----------
+
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, message: "API running" });
 });
 
-// ---------- ROUTES ----------
 
-// Crop Recommender → calls ML model API
 app.post("/api/recommend", async (req, res) => {
   try {
     const response = await fetch("https://agri-ml-api.onrender.com/predict", {
@@ -67,7 +65,7 @@ app.post("/api/recommend", async (req, res) => {
   }
 });
 
-// Crops
+
 app.get("/api/crops", async (req, res) => {
   try {
     const crops = await Crop.find();
@@ -85,7 +83,7 @@ app.get("/api/crops", async (req, res) => {
   }
 });
 
-// Techniques
+
 app.get("/api/techniques", (req, res) => {
   res.json([
     { name: "Drip Irrigation", desc: "Efficient water use for crops." },
@@ -96,7 +94,7 @@ app.get("/api/techniques", (req, res) => {
   ]);
 });
 
-// Schemes
+
 app.get("/api/schemes", (req, res) => {
   res.json([
     {
@@ -120,7 +118,7 @@ app.get("/api/schemes", (req, res) => {
   ]);
 });
 
-// Diseases
+
 app.get("/api/diseases", (req, res) => {
   res.json([
     { crop: "Wheat", disease: "Rust", solution: "Resistant varieties + fungicide" },
@@ -129,7 +127,7 @@ app.get("/api/diseases", (req, res) => {
   ]);
 });
 
-// NPK Advisor
+
 app.post("/api/npk-advisor", (req, res) => {
   const { N, P, K } = req.body;
   const advice = [];
@@ -141,12 +139,12 @@ app.post("/api/npk-advisor", (req, res) => {
   res.json({ advice });
 });
 
-// Contact Form
+
 app.post("/api/contact", async (req, res) => {
   const { name, email, message } = req.body;
   await new Contact({ name, email, message }).save();
   res.json({ success: true, msg: "Message saved!" });
 });
 
-// ---------- EXPORT FOR VERCEL ----------
+
 module.exports = app;
