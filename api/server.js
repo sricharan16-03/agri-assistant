@@ -43,15 +43,30 @@ connectDB().catch(err =>
   console.error("❌ MongoDB connection error:", err)
 );
 
+// Pre-warm the Render ML API on server cold-start so it's ready faster
+const ML_API_URL = "https://agri-ml-api.onrender.com";
+fetch(`${ML_API_URL}/`).catch(() => {}); // fire-and-forget ping
+
 
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, message: "API running" });
 });
 
+// Warmup endpoint — called by the client on page load to wake the Render ML API
+app.get("/api/warmup", async (req, res) => {
+  try {
+    await fetch(`${ML_API_URL}/`, { signal: AbortSignal.timeout(10000) });
+    res.json({ ok: true, message: "ML API is warm" });
+  } catch {
+    // Render might reject a bare GET — that's still fine, server is awake
+    res.json({ ok: true, message: "Warmup ping sent" });
+  }
+});
+
 
 app.post("/api/recommend", async (req, res) => {
   try {
-    const response = await fetch("https://agri-ml-api.onrender.com/predict", {
+    const response = await fetch(`${ML_API_URL}/predict`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(req.body),

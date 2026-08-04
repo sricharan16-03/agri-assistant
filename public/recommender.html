@@ -5,6 +5,36 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Crop Recommender - Agriculture Assistant</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        #warmupStatus {
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-top: 8px;
+            min-height: 1.2em;
+            transition: color 0.3s;
+        }
+        .loading-bar {
+            width: 100%;
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        .loading-bar::after {
+            content: '';
+            display: block;
+            height: 100%;
+            width: 40%;
+            background: linear-gradient(90deg, #16a34a, #4ade80);
+            border-radius: 4px;
+            animation: slide 1.2s ease-in-out infinite;
+        }
+        @keyframes slide {
+            0%   { transform: translateX(-100%); }
+            100% { transform: translateX(350%); }
+        }
+    </style>
 </head>
 <body>
 
@@ -36,6 +66,7 @@
         <div><label for="ph">pH value of soil:</label><input type="number" id="ph" required step="any"></div>
         <div><label for="rainfall">Rainfall (mm):</label><input type="number" id="rainfall" required step="any"></div>
         <button type="submit">Get Recommendation</button>
+        <div id="warmupStatus"></div>
     </form>
 
     <div id="resultDiv"
@@ -57,12 +88,53 @@
 
     const form = document.getElementById("recommenderForm");
     const resultDiv = document.getElementById("resultDiv");
+    const submitBtn = form.querySelector("button[type='submit']");
+    const warmupStatus = document.getElementById("warmupStatus");
+
+    // ── Warm up the Render ML API as soon as the page loads ──────────────────
+    // Render free tier spins down after inactivity; this wakes it in the background
+    // so it's ready by the time the user fills in the form.
+    let mlReady = false;
+
+    async function warmupML() {
+        try {
+            warmupStatus.textContent = "🔄 Waking up AI model...";
+            warmupStatus.style.color = "#f59e0b";
+            await fetch(`${API_BASE}/warmup`);
+            mlReady = true;
+            warmupStatus.textContent = "✅ AI model is ready!";
+            warmupStatus.style.color = "#16a34a";
+            setTimeout(() => { warmupStatus.textContent = ""; }, 3000);
+        } catch {
+            // Silent fail — the recommend endpoint will still work, just slower
+            warmupStatus.textContent = "";
+            mlReady = true;
+        }
+    }
+
+    warmupML();
+    // ─────────────────────────────────────────────────────────────────────────
 
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
         resultDiv.style.display = "block";
-        resultDiv.innerHTML = "<p>Getting recommendation...</p>";
+
+        // If still warming up, show friendly message and poll until ready
+        if (!mlReady) {
+            resultDiv.innerHTML = `
+                <p>⏳ AI model is still waking up, please wait a moment…</p>
+                <div class="loading-bar"></div>
+            `;
+            await new Promise(resolve => {
+                const interval = setInterval(() => {
+                    if (mlReady) { clearInterval(interval); resolve(); }
+                }, 500);
+            });
+        }
+
+        resultDiv.innerHTML = `<p>🌱 Analyzing your soil conditions…</p>`;
+        submitBtn.disabled = true;
 
         const formData = {
             N: parseFloat(document.getElementById("n").value),
@@ -88,14 +160,16 @@
             resultDiv.innerHTML = `
                 <h3>Recommended Crop:</h3>
                 <p style="font-size:1.5rem; font-weight:bold; color:#16a34a;">
-                    ${result.recommended?.[0] ?? "No result"}
+                    🌾 ${result.recommended?.[0] ?? "No result"}
                 </p>
             `;
 
         } catch (error) {
             console.error("Error:", error);
             resultDiv.innerHTML =
-                '<p style="color:red;">Could not get a recommendation. Please ensure the backend API is working.</p>';
+                '<p style="color:red;">Could not get a recommendation. Please try again in a few seconds.</p>';
+        } finally {
+            submitBtn.disabled = false;
         }
     });
 </script>
