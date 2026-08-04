@@ -65,7 +65,7 @@
         <div><label for="humidity">Relative Humidity (%):</label><input type="number" id="humidity" required step="any"></div>
         <div><label for="ph">pH value of soil:</label><input type="number" id="ph" required step="any"></div>
         <div><label for="rainfall">Rainfall (mm):</label><input type="number" id="rainfall" required step="any"></div>
-        <button type="submit">Get Recommendation</button>
+        <button type="submit" id="submitBtn">Get Recommendation</button>
         <div id="warmupStatus"></div>
     </form>
 
@@ -86,30 +86,41 @@
 <script>
     const API_BASE = "/api";
 
-    const form = document.getElementById("recommenderForm");
-    const resultDiv = document.getElementById("resultDiv");
-    const submitBtn = form.querySelector("button[type='submit']");
+    const form        = document.getElementById("recommenderForm");
+    const resultDiv   = document.getElementById("resultDiv");
+    const submitBtn   = document.getElementById("submitBtn");
     const warmupStatus = document.getElementById("warmupStatus");
 
-    // ── Warm up the Render ML API as soon as the page loads ──────────────────
-    // Render free tier spins down after inactivity; this wakes it in the background
-    // so it's ready by the time the user fills in the form.
-    let mlReady = false;
+    // ── Warm up the Render ML API the moment the page loads ──────────────────
+    // /api/warmup calls /predict on Render with dummy data — this forces the
+    // ML model to fully load into memory (not just start the web process).
+    // The button stays disabled + shows elapsed time until warmup resolves.
+    submitBtn.disabled = true;
+    submitBtn.textContent = "⏳ Warming up AI...";
 
     async function warmupML() {
+        let secs = 0;
+        warmupStatus.style.color = "#f59e0b";
+        warmupStatus.textContent = "🔄 Waking up AI model (0s)…";
+
+        const timer = setInterval(() => {
+            secs++;
+            warmupStatus.textContent = `🔄 Waking up AI model (${secs}s)…`;
+        }, 1000);
+
         try {
-            warmupStatus.textContent = "🔄 Waking up AI model...";
-            warmupStatus.style.color = "#f59e0b";
             await fetch(`${API_BASE}/warmup`);
-            mlReady = true;
-            warmupStatus.textContent = "✅ AI model is ready!";
-            warmupStatus.style.color = "#16a34a";
-            setTimeout(() => { warmupStatus.textContent = ""; }, 3000);
         } catch {
-            // Silent fail — the recommend endpoint will still work, just slower
-            warmupStatus.textContent = "";
-            mlReady = true;
+            // Even on network error the Render server will have begun starting
+        } finally {
+            clearInterval(timer);
         }
+
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Get Recommendation";
+        warmupStatus.textContent = "✅ AI model is ready!";
+        warmupStatus.style.color = "#16a34a";
+        setTimeout(() => { warmupStatus.textContent = ""; }, 3000);
     }
 
     warmupML();
@@ -119,31 +130,17 @@
         event.preventDefault();
 
         resultDiv.style.display = "block";
-
-        // If still warming up, show friendly message and poll until ready
-        if (!mlReady) {
-            resultDiv.innerHTML = `
-                <p>⏳ AI model is still waking up, please wait a moment…</p>
-                <div class="loading-bar"></div>
-            `;
-            await new Promise(resolve => {
-                const interval = setInterval(() => {
-                    if (mlReady) { clearInterval(interval); resolve(); }
-                }, 500);
-            });
-        }
-
-        resultDiv.innerHTML = `<p>🌱 Analyzing your soil conditions…</p>`;
+        resultDiv.innerHTML = `<p>🌱 Analyzing your soil conditions…</p><div class="loading-bar"></div>`;
         submitBtn.disabled = true;
 
         const formData = {
-            N: parseFloat(document.getElementById("n").value),
-            P: parseFloat(document.getElementById("p").value),
-            K: parseFloat(document.getElementById("k").value),
+            N:           parseFloat(document.getElementById("n").value),
+            P:           parseFloat(document.getElementById("p").value),
+            K:           parseFloat(document.getElementById("k").value),
             temperature: parseFloat(document.getElementById("temperature").value),
-            humidity: parseFloat(document.getElementById("humidity").value),
-            ph: parseFloat(document.getElementById("ph").value),
-            rainfall: parseFloat(document.getElementById("rainfall").value)
+            humidity:    parseFloat(document.getElementById("humidity").value),
+            ph:          parseFloat(document.getElementById("ph").value),
+            rainfall:    parseFloat(document.getElementById("rainfall").value)
         };
 
         try {
@@ -167,7 +164,7 @@
         } catch (error) {
             console.error("Error:", error);
             resultDiv.innerHTML =
-                '<p style="color:red;">Could not get a recommendation. Please try again in a few seconds.</p>';
+                '<p style="color:red;">Could not get a recommendation. Please try again.</p>';
         } finally {
             submitBtn.disabled = false;
         }

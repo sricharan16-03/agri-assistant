@@ -43,23 +43,38 @@ connectDB().catch(err =>
   console.error("❌ MongoDB connection error:", err)
 );
 
-// Pre-warm the Render ML API on server cold-start so it's ready faster
+// Pre-warm the Render ML API on server cold-start — call /predict with dummy
+// data so the ML model is fully loaded, not just the web process.
 const ML_API_URL = "https://agri-ml-api.onrender.com";
-fetch(`${ML_API_URL}/`).catch(() => {}); // fire-and-forget ping
+const DUMMY_PREDICT_BODY = JSON.stringify({
+  N: 90, P: 42, K: 43, temperature: 20.8, humidity: 82, ph: 6.5, rainfall: 202
+});
+fetch(`${ML_API_URL}/predict`, {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: DUMMY_PREDICT_BODY,
+}).catch(() => {}); // fire-and-forget
 
 
 app.get("/api/health", (req, res) => {
   res.json({ ok: true, message: "API running" });
 });
 
-// Warmup endpoint — called by the client on page load to wake the Render ML API
+// Warmup endpoint — calls /predict with dummy data so the ML model fully loads
+// Vercel hobby plan has a 60s function timeout, Render cold-start is ~30-50s
 app.get("/api/warmup", async (req, res) => {
   try {
-    await fetch(`${ML_API_URL}/`, { signal: AbortSignal.timeout(10000) });
+    await fetch(`${ML_API_URL}/predict`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: DUMMY_PREDICT_BODY,
+      signal: AbortSignal.timeout(58000), // just under Vercel's 60s limit
+    });
     res.json({ ok: true, message: "ML API is warm" });
-  } catch {
-    // Render might reject a bare GET — that's still fine, server is awake
-    res.json({ ok: true, message: "Warmup ping sent" });
+  } catch (err) {
+    // Even if this times out, the Render server is now actively starting up
+    console.log("Warmup result:", err?.name);
+    res.json({ ok: true, message: "Warmup ping sent, ML loading" });
   }
 });
 
